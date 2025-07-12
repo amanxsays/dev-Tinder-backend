@@ -24,7 +24,7 @@ const userSchema= new mongoose.Schema({
         type: String,
         required: true,
         validate(value){
-            if(!validater.isStrongPassword(value)) throw new Error("Password is too weak to crack: "+value);
+            if(!validater.isStrongPassword(value)) throw new Error("Password is too weak: "+value);
         }
     },
     age:{
