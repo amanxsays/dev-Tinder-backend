@@ -4,7 +4,6 @@ const User= require('./models/user');
 const validateSignupData = require('./utils/validation');
 const { userAuth } = require('./middleware/auth')
 const bcrypt= require('bcrypt');
-const jwt= require('jsonwebtoken');
 const cookieParser= require('cookie-parser');
 
 const app=express();
@@ -17,12 +16,12 @@ app.post("/login", async (req,res)=>{
         const {emailId, password}=req.body;
         const user= await User.findOne({emailId: emailId});
         if(!user) throw new Error("Invalid credentials");
-        const verifyPass= await bcrypt.compare(password, user.password);
+        const verifyPass= await user.validatePass(password);
         if(!verifyPass) throw new Error("Invalid credentials");
         else{
             //make a token and wrap inside cookie and send back by res
-            const token= await jwt.sign({_id: user._id}, "Aman's@Dev-Tinder07")
-            res.cookie("token", token);
+            const token= await user.getJWT();
+            res.cookie("token", token , {expires: new Date(Date.now()+7*24*3600000)});
             res.send("Login Successfully...🫂");
         }
         
