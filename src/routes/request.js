@@ -26,5 +26,26 @@ requestRouter.post("/request/send/:status/:toUserId", userAuth, async (req,res) 
         res.status(400).send("Error: " +error.message);
     }
 })
+requestRouter.post("/request/review/:status/:requestId", userAuth, async (req,res) => {
+    try {
+        const { requestId , status }=req.params;
+        const loggedInUser=req.user;
+        if(!["accepted","rejected"].includes(status)) throw new Error("Invalid status type : "+status);
+
+        const connectionRequest = await ConnectionRequest.findOne({
+            fromUserId: requestId,
+            toUserId: loggedInUser._id,
+            status:"interested"
+        });
+        if(!connectionRequest) throw new Error("Invalid Request Made ⚠️");
+
+        const requestedUser= await User.findById(requestId)
+        connectionRequest.status=status;
+        await connectionRequest.save();
+        res.send(loggedInUser.firstName+" "+ status +" the request from "+requestedUser.firstName);
+    } catch (error) {
+        res.status(400).send("Error: " +error.message);
+    }
+})
 
 module.exports = requestRouter;
