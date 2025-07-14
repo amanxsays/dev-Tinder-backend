@@ -48,6 +48,9 @@ const userSchema= new mongoose.Schema({
             if(!validater.isURL(value)) throw new Error("Image URL is invalid: "+value);
         }
     },
+    about:{
+        type: String
+    },
     skills:{
         type: [String],
     }
