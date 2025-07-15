@@ -32,7 +32,7 @@ authRouter.post("/login", async (req,res)=>{
             //make a token and wrap inside cookie and send back by res
             const token= await user.getJWT();
             res.cookie("token", token , {expires: new Date(Date.now()+7*24*3600000)});
-            res.send("Login Successfully...🫂");
+            res.send(user.firstName+" logged in Successfully...🫂");
         }
         
     } catch (error) {
