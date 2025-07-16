@@ -28,7 +28,7 @@ userRouter.get("/user/connections" , userAuth, async (req,res)=>{
                 {fromUserId:loggedInUser._id,status:"accepted"},
             ]
         }
-        ).populate("fromUserId",safeData).populate("toUserId",SAFE_DATA);
+        ).populate("fromUserId",SAFE_DATA).populate("toUserId",SAFE_DATA);
         
         const showableData=connections.map( key => ((key.fromUserId._id.toString()!==loggedInUser._id.toString()) ? key.fromUserId : key.toUserId));
         res.send(showableData);
