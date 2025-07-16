@@ -43,7 +43,6 @@ const userSchema= new mongoose.Schema({
     },
     photoUrl:{
         type: String,
-        default: "https://www.pikpng.com/pngl/b/326-3261783_person-icon-default-user-image-jpg-clipart.png",
         validate(value){
             if(!validater.isURL(value)) throw new Error("Image URL is invalid: "+value);
         }

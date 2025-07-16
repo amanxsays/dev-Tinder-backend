@@ -11,9 +11,10 @@ authRouter.post("/signup", async (req,res)=>{
         validateSignupData(req);
         //encrypt password
         const { firstName, lastName, emailId, password}=req.body;
+        const photoUrl ="https://api.dicebear.com/9.x/fun-emoji/svg?seed="+firstName+lastName;
         const hashPass= await bcrypt.hash(password, 10);
 
-        const user1= new User({firstName:firstName, lastName:lastName, emailId:emailId, password:hashPass});
+        const user1= new User({firstName:firstName, lastName:lastName, emailId:emailId, password:hashPass, photoUrl:photoUrl});
         await user1.save();
         res.send("User Added Successfully");
     } catch (error) {
