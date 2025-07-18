@@ -7,7 +7,7 @@ const userAuth= async (req,res,next)=>{
         const {token}=cookies;
         if(!token) throw new Error("Invalid Token");
         
-        const decodeToken= await jwt.verify(token, "Aman's@Dev-Tinder07");
+        const decodeToken= await jwt.verify(token, process.env.JWT_KEY);
         const { _id }=decodeToken;
 
         const user= await User.findById(_id);
