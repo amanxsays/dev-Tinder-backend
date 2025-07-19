@@ -20,7 +20,7 @@ const sendEmail=async (to,subject,text,html) => {
             text,
             html
     });
-    console.log("Otp sent:", info.response);
+    console.log("Mail sent:", info.response);
     } catch (error) {
         console.error("Error sending email:", error.message);
     }

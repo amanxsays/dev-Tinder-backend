@@ -7,8 +7,7 @@ const requestRouter = require("./routes/request");
 const userRouter = require("./routes/user");
 const cors = require("cors");
 require("dotenv").config();
-const { sendEmail } = require("./utils/send-email");
-
+require("./utils/cronjobs")
 
 corsOptions = {
   origin: "http://localhost:5173", // Allow only a specific origin

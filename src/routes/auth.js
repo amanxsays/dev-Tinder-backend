@@ -4,6 +4,8 @@ const {validateSignupData} = require('../utils/validation');
 const bcrypt=require('bcrypt');
 const { sendEmail }= require("../utils/send-email");
 const Otp = require('../models/otp');
+const otpTemplate= require("../utils/templates/otpTemplate");
+const registerationTemplate = require('../utils/templates/registerationTemplate');
 
 const authRouter=express.Router();
 
@@ -25,7 +27,7 @@ authRouter.post("/signup", async (req,res)=>{
         await user1.save();
         const token= await user1.getJWT();
         res.cookie("token", token , {expires: new Date(Date.now()+7*24*3600000)});
-        sendEmail(emailId,"New account activity at DEVTINDER",`Congratulations ${firstName+" "+lastName} 👍🏻...  You have successfully registered ✅`);
+        sendEmail(emailId,`Welcome ${firstName} !`,"",registerationTemplate(firstName,lastName));
         res.json({
             message:"User Added Successfully",
             data:user1
@@ -47,7 +49,7 @@ authRouter.post("/otp", async (req,res)=>{
         if(otpALreadyThere) res.status(402).json({message: "OTP is ALready sent", data: otpALreadyThere.createdAt});
         const otpObj= new Otp({emailId: emailId, otp: Math.floor(100000 + Math.random() * 900000)});
         await otpObj.save();
-        sendEmail(emailId,"Verify ur email",otpObj.otp);
+        sendEmail(emailId,"Otp Verification of your email on DevTinder","",otpTemplate(otpObj.otp));
         res.json({message:"Otp sent to your email", data:otpObj.createdAt});
     } catch (error) {
         res.status(400).send("Error: " +error.message || error.data.message)
