@@ -6,6 +6,9 @@ const profileRouter = require("./routes/profile");
 const requestRouter = require("./routes/request");
 const userRouter = require("./routes/user");
 const cors = require("cors");
+const http= require("http");
+const initializeSocket = require("./utils/socket");
+
 require("dotenv").config();
 require("./utils/cronjobs")
 
@@ -14,6 +17,8 @@ corsOptions = {
   credentials: true, // Enable cookies and credentials
 };
 const app = express();
+const server= http.createServer(app);
+initializeSocket(server);
 
 app.use(cors(corsOptions));
 app.use(express.json());
@@ -27,7 +32,7 @@ app.use("/", userRouter);
 connectDB()
   .then(() => {
     console.log("Connected To DB");
-    app.listen(process.env.PORT, () => {
+    server.listen(process.env.PORT, () => {
       console.log("Server is listening");
     });
   })

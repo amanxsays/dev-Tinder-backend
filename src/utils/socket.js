@@ -1,0 +1,25 @@
+const socket = require("socket.io");
+
+const initializeSocket = (server) => {
+  const io = socket(server, {
+    cors: {
+      origin: "http://localhost:5173",
+    },
+  });
+
+  io.on("connection", (socket) => {
+    //handle events
+    socket.on("joinChat", ({userId, targetUserId}) => {
+        const roomId = [userId, targetUserId].sort().join("_");
+        socket.join(roomId);
+    });
+    socket.on("sendMessage", ({firstName, userId, targetUserId, text, photoUrl}) => {
+        //create that same room user id and emit the message there
+        const roomId = [userId, targetUserId].sort().join("_");
+        io.to(roomId).emit("messageReceived",{firstName,text,photoUrl});
+    });
+    socket.on("disconnect", () => {});
+  });
+};
+
+module.exports = initializeSocket;
