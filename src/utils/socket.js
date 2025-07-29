@@ -1,5 +1,6 @@
 const socket = require("socket.io");
 const { Chat } = require("../models/chat");
+const ConnectionRequest = require("../models/connectionRequests");
 
 const initializeSocket = (server) => {
   const io = socket(server, {
@@ -10,7 +11,12 @@ const initializeSocket = (server) => {
 
   io.on("connection", (socket) => {
     //handle events
-    socket.on("joinChat", ({userId, targetUserId}) => {
+    socket.on("joinChat", async ({userId, targetUserId}) => {
+        const connection= await ConnectionRequest.findOne({$or:[
+          {fromUserId:userId, toUserId:targetUserId},
+          {fromUserId:targetUserId, toUserId:userId}
+        ]})
+        if(connection?.status!="accepted") return;
         const roomId = [userId, targetUserId].sort().join("_");
         socket.join(roomId);
     });
