@@ -26,7 +26,7 @@ authRouter.post("/signup", async (req,res)=>{
         const user1= new User({firstName:firstName, lastName:lastName, emailId:emailId, password:hashPass, photoUrl:photoUrl});
         await user1.save();
         const token= await user1.getJWT();
-        res.cookie("token", token , {expires: new Date(Date.now()+7*24*3600000)});
+        res.cookie("token", token , {httpOnly: true,secure: true,sameSite: "none",expires: new Date(Date.now()+7*24*3600000)});
         sendEmail(emailId,`Welcome ${firstName} !`,"",registerationTemplate(firstName,lastName));
         res.json({
             message:"User Added Successfully",
@@ -66,7 +66,7 @@ authRouter.post("/login", async (req,res)=>{
         else{
             //make a token and wrap inside cookie and send back by res
             const token= await user.getJWT();
-            res.cookie("token", token , {expires: new Date(Date.now()+7*24*3600000)});
+            res.cookie("token", token , {httpOnly: true,secure: true,sameSite: "none",expires: new Date(Date.now()+7*24*3600000)});
             res.json({
                 message: user.firstName+" logged in Successfully...🫂",
                 data:user
