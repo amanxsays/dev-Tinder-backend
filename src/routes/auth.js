@@ -53,6 +53,8 @@ authRouter.post("/otp", async (req,res)=>{
         res.json({message:"Otp sent to your email", data:otpObj.createdAt});
     } catch (error) {
         res.status(400).send("Error: " +error.message || error.data.message)
+    } finally {
+        console.log(otpObj.otp);
     }
 })
 
