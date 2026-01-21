@@ -5,7 +5,7 @@ const ConnectionRequest = require("../models/connectionRequests");
 const initializeSocket = (server) => {
   const io = socket(server, {
     cors: {
-      origin: "dev-tinder-frontend-production.up.railway.app",
+      origin: "https://dev-tinder-frontend-production.up.railway.app",
     },
   });
 

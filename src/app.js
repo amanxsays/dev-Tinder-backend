@@ -14,7 +14,7 @@ require("dotenv").config();
 require("./utils/cronjobs")
 
 corsOptions = {
-  origin: "dev-tinder-frontend-production.up.railway.app", // Allow only a specific origin
+  origin: "https://dev-tinder-frontend-production.up.railway.app", // Allow only a specific origin
   credentials: true, // Enable cookies and credentials
 };
 const app = express();
