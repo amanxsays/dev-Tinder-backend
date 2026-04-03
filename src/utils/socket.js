@@ -1,11 +1,12 @@
 const socket = require("socket.io");
 const { Chat } = require("../models/chat");
 const ConnectionRequest = require("../models/connectionRequests");
+require("dotenv").config();
 
 const initializeSocket = (server) => {
   const io = socket(server, {
     cors: {
-      origin: "https://dev-tinder-frontend-production.up.railway.app",
+      origin: process.env.FRONTEND_API_URL,
     },
   });
 
