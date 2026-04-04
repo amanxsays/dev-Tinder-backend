@@ -47,7 +47,15 @@ const userSchema= new mongoose.Schema({
     },
     skills:{
         type: [String],
-    }
+    },
+    githubHandle:{
+        type: [String],
+        trim: true,
+    },     
+    codeforcesHandle:{
+        type: [String],
+        trim: true,
+    },
 },
 { timestamps: true}
 );

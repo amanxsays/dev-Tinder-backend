@@ -11,7 +11,7 @@ const validateSignupData=(req)=>{
 }
 
 const validateEditProfileData=(req)=>{
-    const allowedKeys =["firstName","lastName","age","skills","gender","photoUrl","about"];
+    const allowedKeys =["firstName","lastName","age","skills","gender","photoUrl","about","githubHandle","codeforcesHandle"];
     const canUpdate=Object.keys(req.body).every( field => allowedKeys.includes(field));
     const {firstName ,lastName ,skills ,about} = req.body;
 
