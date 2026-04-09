@@ -11,6 +11,7 @@ const enrichProfileWithStats = async (user) => {
     if (user.codeforcesHandle) {
         queryParams.codeforces = Array.isArray(user.codeforcesHandle) ? user.codeforcesHandle[0] : user.codeforcesHandle;
     }
+    
     if (Object.keys(queryParams).length > 0) {
         try {
             const response = await axios.get(`${process.env.STATS_SERVICE_URL}/api/stats`, {
