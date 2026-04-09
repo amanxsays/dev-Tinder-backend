@@ -2,8 +2,8 @@ const express= require('express');
 const { userAuth } = require('../middleware/auth');
 const { validateEditProfileData } = require('../utils/validation');
 const { enrichProfileWithStats } = require('../utils/fetchStats');
+const ConnectionRequest = require("../models/connectionRequests");
 const bcrypt=require('bcrypt');
-const axios = require('axios');
 const User = require('../models/user');
 
 const profileRouter=express.Router();
@@ -19,14 +19,28 @@ profileRouter.get("/profile/view", userAuth, async (req,res)=>{
 
 profileRouter.get("/profile/view/:userId", userAuth, async (req, res) => {
     try {
+        const loggedInUser=req.user;
         const targetUser = await User.findById(req.params.userId);
         if (!targetUser) return res.status(404).send("User not found");
-        const fullProfile = await enrichProfileWithStats(targetUser);
-        if (req.user._id.toString() !== req.params.userId) {
-            delete fullProfile.password;
-            delete fullProfile.emailId;
+        const enrichedUser = await enrichProfileWithStats(targetUser);
+
+        const connection = await ConnectionRequest.findOne({
+            $or: [
+                { fromUserId: loggedInUser._id, toUserId: targetUser._id },
+                { fromUserId: targetUser._id, toUserId: loggedInUser._id }
+            ]
+        });
+
+        const finalProfile = typeof enrichedUser.toObject === 'function' 
+            ? enrichedUser.toObject() 
+            : { ...enrichedUser };
+        finalProfile.connectionStatus = connection ? connection.status : null;
+
+        if (loggedInUser._id.toString() !== req.params.userId) {
+            delete finalProfile.password;
+            delete finalProfile.emailId;
         }
-        res.json(fullProfile);
+        res.json(finalProfile);
     } catch (error) {
         res.status(400).send("Error: " + error.message);
     }

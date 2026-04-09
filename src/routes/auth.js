@@ -46,7 +46,7 @@ authRouter.post("/otp", async (req,res)=>{
         if(present) throw new Error("Email already exists !");
         //generate otp and store
         const otpALreadyThere=await Otp.findOne({emailId: emailId});
-        if(otpALreadyThere) res.status(402).json({message: "OTP is ALready sent", data: otpALreadyThere.createdAt});
+        if(otpALreadyThere) return res.status(402).json({message: "OTP is ALready sent", data: otpALreadyThere.createdAt});
         const otpObj= new Otp({emailId: emailId, otp: Math.floor(100000 + Math.random() * 900000)});
         await otpObj.save();
         sendEmail(emailId,"Otp Verification of your email on DevTinder","",otpTemplate(otpObj.otp));
