@@ -49,8 +49,8 @@ authRouter.post("/otp", async (req,res)=>{
         if(otpALreadyThere) return res.status(402).json({message: "OTP is ALready sent", data: otpALreadyThere.createdAt});
         const otpObj= new Otp({emailId: emailId, otp: Math.floor(100000 + Math.random() * 900000)});
         await otpObj.save();
-        sendEmail(emailId,"Otp Verification of your email on DevTinder","",otpTemplate(otpObj.otp));
-        res.json({message:`Otp sent to your email :${otpObj.otp}`, data:otpObj.createdAt});
+        await sendEmail(emailId,"Otp Verification of your email on DevTinder","",otpTemplate(otpObj.otp));
+        res.json({message:`Otp sent to your email`, data:otpObj.createdAt});
     } catch (error) {
         res.status(400).send("Error: " +error.message || error.data.message)
     }
