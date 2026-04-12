@@ -49,10 +49,16 @@ authRouter.post("/otp", async (req,res)=>{
         if(otpALreadyThere) return res.status(402).json({message: "OTP is ALready sent", data: otpALreadyThere.createdAt});
         const otpObj= new Otp({emailId: emailId, otp: Math.floor(100000 + Math.random() * 900000)});
         await otpObj.save();
-        await sendEmail(emailId,"Otp Verification of your email on DevTinder","",otpTemplate(otpObj.otp));
+        try {
+            await sendEmail(emailId,"Otp Verification of your email on DevTinder","",otpTemplate(otpObj.otp));
+        } catch (error) {
+            await Otp.findByIdAndDelete(otpObj._id); 
+            throw new Error("Email service is blocked. Please click Resend.");
+        }
         res.json({message:`Otp sent to your email`, data:otpObj.createdAt});
     } catch (error) {
-        res.status(400).send("Error: " +error.message || error.data.message)
+        res.status(400).send("Error: " +error.message || error.data.message);
+
     }
 })
 

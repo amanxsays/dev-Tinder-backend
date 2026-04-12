@@ -23,6 +23,7 @@ const sendEmail=async (to,subject,text,html) => {
     console.log("Mail sent:", info.response);
     } catch (error) {
         console.error("Error sending email:", error.message);
+        throw error;
     }
 };
 module.exports ={sendEmail};
