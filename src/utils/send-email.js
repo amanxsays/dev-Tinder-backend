@@ -52,8 +52,6 @@ const sendEmail = async (to, subject, text, html) => {
                 httpsAgent: httpsAgent
             }
         );
-
-        console.log("Mail sent via Promailer API:", response.data);
         return response.data;
     } catch (error) {
         console.error("Error sending API email:", error.response?.data || error.message);
