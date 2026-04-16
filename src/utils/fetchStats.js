@@ -21,6 +21,12 @@ const enrichProfileWithStats = async (user) => {
         queryParams.codeforces = cfHandle;
         queryParams.userId = userId;
     }
+
+    const lcHandle = Array.isArray(fullProfile.leetcodeHandle) ? fullProfile.leetcodeHandle[0] : fullProfile.leetcodeHandle;
+    if (!fullProfile.integrations.leetcode && lcHandle) {
+        queryParams.leetcode = lcHandle;
+        queryParams.userId = userId;
+    }
     
     if (Object.keys(queryParams).length > 1 || (Object.keys(queryParams).length === 1 && !queryParams.userId)) {
         console.log(`[Integration] Missing stats in Mongo for ${fullProfile.firstName}. Waking up Spring Boot...`);
@@ -35,6 +41,9 @@ const enrichProfileWithStats = async (user) => {
             }
             if (response.data.codeforces) {
                 fullProfile.integrations.codeforces = response.data.codeforces;
+            }
+            if(response.data.leetcode){
+                fullProfile.integrations.leetcode = response.data.leetcode;
             }
         } catch (error) {
             console.error("⚠️ Spring Boot microservice error:", error.message);
