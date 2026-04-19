@@ -4,6 +4,7 @@ const cookieParser = require("cookie-parser");
 const authRouter = require("./routes/auth");
 const profileRouter = require("./routes/profile");
 const requestRouter = require("./routes/request");
+const statsRouter = require("./routes/stats");
 const userRouter = require("./routes/user");
 const cors = require("cors");
 const http= require("http");
@@ -30,6 +31,7 @@ app.use("/", profileRouter);
 app.use("/", requestRouter);
 app.use("/", userRouter);
 app.use("/", chatRouter);
+app.use("/", statsRouter);
 
 connectDB()
   .then(() => {
