@@ -13,6 +13,9 @@ statsRouter.get('/stats', userAuth, async (req, res) => {
         const SPRING_BACKEND_URL = process.env.STATS_SERVICE_URL || "https://dev-tinder-spring-backend.onrender.com";
 
         console.log(`[Proxy] Forwarding request to Spring Boot for User: ${userId}`);
+
+        console.log("🕵️ DEBUG - Axios is trying to call:", `${SPRING_BACKEND_URL}/api/stats`);
+        
         const response = await axios.get(`${SPRING_BACKEND_URL}/api/stats`, {
             params: queryParams,
             timeout: 60000 
