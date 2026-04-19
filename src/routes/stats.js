@@ -15,7 +15,7 @@ statsRouter.get('/stats', userAuth, async (req, res) => {
         console.log(`[Proxy] Forwarding request to Spring Boot for User: ${userId}`);
         const response = await axios.get(`${SPRING_BACKEND_URL}/api/stats`, {
             params: queryParams,
-            timeout: 15000 
+            timeout: 60000 
         });
 
         res.json(response.data);
