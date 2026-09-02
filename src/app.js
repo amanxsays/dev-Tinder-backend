@@ -1,4 +1,5 @@
 const express = require("express");
+const path = require("path");
 const connectDB = require("./config/database");
 const cookieParser = require("cookie-parser");
 const authRouter = require("./routes/auth");
@@ -15,7 +16,7 @@ require("dotenv").config();
 require("./utils/cronjobs")
 
 corsOptions = {
-  origin: process.env.FRONTEND_API_URL, // Allow only a specific origin
+  origin: process.env.FRONTEND_API_URL,
   credentials: true, // Enable cookies and credentials
 };
 const app = express();
@@ -25,6 +26,7 @@ initializeSocket(server);
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 app.use("/", authRouter);
 app.use("/", profileRouter);
@@ -32,6 +34,7 @@ app.use("/", requestRouter);
 app.use("/", userRouter);
 app.use("/", chatRouter);
 app.use("/", statsRouter);
+//Maintaining single responsibility principal
 
 connectDB()
   .then(() => {

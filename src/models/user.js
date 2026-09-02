@@ -59,6 +59,12 @@ const userSchema= new mongoose.Schema({
     leetcodeHandle:{
         type: [String],
         trim: true,
+    },
+    resumeUrl:{
+        type: String,
+    },
+    resumeFileName:{
+        type: String,
     }
 },
 { timestamps: true}

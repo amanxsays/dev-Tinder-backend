@@ -1,7 +1,10 @@
 const express= require('express');
+const fs = require('fs');
+const path = require('path');
 const { userAuth } = require('../middleware/auth');
 const { validateEditProfileData } = require('../utils/validation');
 const { enrichProfileWithStats } = require('../utils/fetchStats');
+const resumeUpload = require('../utils/resumeUpload');
 const ConnectionRequest = require("../models/connectionRequests");
 const bcrypt=require('bcrypt');
 const User = require('../models/user');
@@ -57,6 +60,35 @@ profileRouter.patch("/profile/edit", userAuth, async (req,res)=>{
         res.status(400).send("Error: " +error.message)
     }
 })
+
+profileRouter.post("/profile/resume/upload", userAuth, (req, res) => {
+    resumeUpload.single("resume")(req, res, async (err) => {
+        try {
+            if (err) throw new Error(err.message);
+            if (!req.file) throw new Error("No resume file uploaded");
+
+            const loggedInUser = req.user;
+            const previousResumePath = loggedInUser.resumeUrl
+                ? path.join(__dirname, "..", "..", loggedInUser.resumeUrl)
+                : null;
+
+            loggedInUser.resumeUrl = `/uploads/resumes/${req.file.filename}`;
+            loggedInUser.resumeFileName = req.file.originalname;
+            await loggedInUser.save();
+
+            if (previousResumePath) {
+                fs.unlink(previousResumePath, () => {});
+            }
+
+            res.json({
+                message: `${loggedInUser.firstName} ! Resume uploaded ✅`,
+                data: loggedInUser,
+            });
+        } catch (error) {
+            res.status(400).send("Error: " + error.message);
+        }
+    });
+});
 
 profileRouter.patch("/profile/password", userAuth, async (req,res)=>{
     const { currentPassword, newPassword}=req.body;
