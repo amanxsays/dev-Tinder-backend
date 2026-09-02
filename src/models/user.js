@@ -65,6 +65,9 @@ const userSchema= new mongoose.Schema({
     },
     resumeFileName:{
         type: String,
+    },
+    resumePublicId: {
+        type: String,
     }
 },
 { timestamps: true}

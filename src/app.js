@@ -12,6 +12,7 @@ const http= require("http");
 const initializeSocket = require("./utils/socket");
 const chatRouter = require("./routes/chat");
 
+require("dns").setDefaultResultOrder("ipv4first");
 require("dotenv").config();
 require("./utils/cronjobs")
 
@@ -26,7 +27,7 @@ initializeSocket(server);
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+// app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 app.use("/", authRouter);
 app.use("/", profileRouter);

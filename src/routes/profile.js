@@ -4,12 +4,12 @@ const path = require('path');
 const { userAuth } = require('../middleware/auth');
 const { validateEditProfileData } = require('../utils/validation');
 const { enrichProfileWithStats } = require('../utils/fetchStats');
-const resumeUpload = require('../utils/resumeUpload');
 const ConnectionRequest = require("../models/connectionRequests");
 const bcrypt=require('bcrypt');
 const User = require('../models/user');
 
 const profileRouter=express.Router();
+const { cloudinary } = require("../utils/resumeUpload");
 
 profileRouter.get("/profile/view", userAuth, async (req,res)=>{
     try {
@@ -61,33 +61,94 @@ profileRouter.patch("/profile/edit", userAuth, async (req,res)=>{
     }
 })
 
-profileRouter.post("/profile/resume/upload", userAuth, (req, res) => {
-    resumeUpload.single("resume")(req, res, async (err) => {
-        try {
-            if (err) throw new Error(err.message);
-            if (!req.file) throw new Error("No resume file uploaded");
 
-            const loggedInUser = req.user;
-            const previousResumePath = loggedInUser.resumeUrl
-                ? path.join(__dirname, "..", "..", loggedInUser.resumeUrl)
-                : null;
+// GET a signed payload so the browser can upload the resume straight to Cloudinary
+profileRouter.get("/profile/resume/upload-signature", userAuth, (req, res) => {
+    try {
+        const timestamp = Math.round(Date.now() / 1000);
+        const publicId = `${req.user._id}-${Date.now()}`;
+        const folder = "devtinder/resumes";
 
-            loggedInUser.resumeUrl = `/uploads/resumes/${req.file.filename}`;
-            loggedInUser.resumeFileName = req.file.originalname;
-            await loggedInUser.save();
+        const signature = cloudinary.utils.api_sign_request(
+            { folder, public_id: publicId, timestamp },
+            process.env.CLOUDINARY_API_SECRET
+        );
 
-            if (previousResumePath) {
-                fs.unlink(previousResumePath, () => {});
-            }
+        res.json({
+            timestamp,
+            signature,
+            publicId,
+            folder,
+            apiKey: process.env.CLOUDINARY_API_KEY,
+            cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+        });
+    } catch (err) {
+        res.status(500).json({ message: "ERROR: " + err.message });
+    }
+});
 
-            res.json({
-                message: `${loggedInUser.firstName} ! Resume uploaded ✅`,
-                data: loggedInUser,
-            });
-        } catch (error) {
-            res.status(400).send("Error: " + error.message);
+// GET a signed payload so the browser can delete the previous resume from Cloudinary
+profileRouter.get("/profile/resume/destroy-signature", userAuth, (req, res) => {
+    try {
+        const publicId = req.user.resumePublicId;
+        if (!publicId) {
+            return res.status(400).json({ message: "No existing resume to delete." });
         }
-    });
+
+        const timestamp = Math.round(Date.now() / 1000);
+        const signature = cloudinary.utils.api_sign_request(
+            { public_id: publicId, timestamp },
+            process.env.CLOUDINARY_API_SECRET
+        );
+
+        res.json({
+            timestamp,
+            signature,
+            publicId,
+            apiKey: process.env.CLOUDINARY_API_KEY,
+            cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+        });
+    } catch (err) {
+        res.status(500).json({ message: "ERROR: " + err.message });
+    }
+});
+
+// PATCH endpoint to save resume details once the browser has uploaded directly to Cloudinary
+profileRouter.patch("/profile/resume", userAuth, async (req, res) => {
+    try {
+        const { resumeUrl, resumeFileName, resumePublicId } = req.body;
+        if (!resumeUrl || !resumeFileName || !resumePublicId) {
+            return res.status(400).json({ message: "Missing resume details." });
+        }
+
+        const loggedInUser = req.user;
+        loggedInUser.resumeUrl = resumeUrl;
+        loggedInUser.resumeFileName = resumeFileName;
+        loggedInUser.resumePublicId = resumePublicId;
+        await loggedInUser.save();
+
+        // Tell the Java backend to process the resume in the background
+        try {
+            fetch("http://localhost:8080/api/ingestion/process", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    fileUrl: resumeUrl,
+                    candidateId: loggedInUser._id.toString(),
+                    fileName: resumeFileName
+                })
+            }).catch(err => console.error("Java ingestion failed:", err.message));
+        } catch (err) {
+            console.error("Fetch error:", err.message);
+        }
+
+        res.json({
+            message: "Resume uploaded successfully!",
+            data: loggedInUser,
+        });
+    } catch (err) {
+        res.status(500).json({ message: "ERROR: " + err.message });
+    }
 });
 
 profileRouter.patch("/profile/password", userAuth, async (req,res)=>{
