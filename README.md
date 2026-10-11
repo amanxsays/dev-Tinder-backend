@@ -213,6 +213,15 @@ The API + Socket.IO server starts on `PORT` (e.g. `http://localhost:7777`).
 
 ### 4. Verify
 
+Resume uploads save a new `resumeDocumentId` on the authenticated user's profile.
+The previous Cloudinary file is removed only after a successful save. Replacing
+or removing a resume also notifies the integration service to delete its old
+Pinecone vectors and Mongo chunks. Set `STATS_SERVICE_URL` to the running
+integration service URL; it also retries retired search data every 60 seconds.
+Cleanup makes no AI calls. Indexing a new PDF still requires embeddings.
+
+Run the upload/deletion regression checks with `node --test tests/resumeLifecycle.test.cjs`.
+
 ```bash
 curl http://localhost:7777/profile/view      # expect 401 without a session cookie — confirms the server is up
 ```

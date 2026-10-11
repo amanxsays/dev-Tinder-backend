@@ -68,6 +68,9 @@ const userSchema= new mongoose.Schema({
     },
     resumePublicId: {
         type: String,
+    },
+    resumeDocumentId: {
+        type: String,
     }
 },
 { timestamps: true}

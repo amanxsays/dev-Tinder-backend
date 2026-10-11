@@ -8,6 +8,7 @@ const requestRouter = require("./routes/request");
 const statsRouter = require("./routes/stats");
 const userRouter = require("./routes/user");
 const cors = require("cors");
+const { createCorsOptions } = require("./utils/corsOptions");
 const http= require("http");
 const initializeSocket = require("./utils/socket");
 const chatRouter = require("./routes/chat");
@@ -16,10 +17,7 @@ require("dns").setDefaultResultOrder("ipv4first");
 require("dotenv").config();
 require("./utils/cronjobs")
 
-corsOptions = {
-  origin: process.env.FRONTEND_API_URL,
-  credentials: true, // Enable cookies and credentials
-};
+const corsOptions = createCorsOptions(process.env.FRONTEND_API_URL);
 const app = express();
 const server= http.createServer(app);
 initializeSocket(server);

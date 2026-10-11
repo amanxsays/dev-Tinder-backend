@@ -7,6 +7,8 @@ const { enrichProfileWithStats } = require('../utils/fetchStats');
 const ConnectionRequest = require("../models/connectionRequests");
 const bcrypt=require('bcrypt');
 const User = require('../models/user');
+const { randomUUID } = require('node:crypto');
+const { resumeVersionFilter, createResumeUpdate, notifyResumeService, sourceMatchesCurrentResume } = require('../utils/resumeLifecycle');
 
 const profileRouter=express.Router();
 const { cloudinary } = require("../utils/resumeUpload");
@@ -66,7 +68,8 @@ profileRouter.patch("/profile/edit", userAuth, async (req,res)=>{
 profileRouter.get("/profile/resume/upload-signature", userAuth, (req, res) => {
     try {
         const timestamp = Math.round(Date.now() / 1000);
-        const publicId = `${req.user._id}-${Date.now()}`;
+        // Raw assets need the file extension in their public ID.
+        const publicId = `${req.user._id}-${randomUUID()}.pdf`;
         const folder = "devtinder/resumes";
 
         const signature = cloudinary.utils.api_sign_request(
@@ -113,35 +116,39 @@ profileRouter.get("/profile/resume/destroy-signature", userAuth, (req, res) => {
     }
 });
 
-// PATCH endpoint to save resume details once the browser has uploaded directly to Cloudinary
+async function retireResume(previous, current) {
+    const tasks = [notifyResumeService(current)];
+    if (previous.resumePublicId && previous.resumePublicId !== current.resumePublicId) {
+        tasks.push(cloudinary.uploader.destroy(previous.resumePublicId, { resource_type: 'raw', invalidate: true }));
+    }
+    const results = await Promise.allSettled(tasks);
+    results.forEach(result => {
+        if (result.status === 'rejected') console.error('Resume background task failed:', result.reason.message);
+    });
+}
+
+// Save first. Cleanup must never destroy the previous file if this update fails.
 profileRouter.patch("/profile/resume", userAuth, async (req, res) => {
     try {
-        const { resumeUrl, resumeFileName, resumePublicId } = req.body;
-        if (!resumeUrl || !resumeFileName || !resumePublicId) {
-            return res.status(400).json({ message: "Missing resume details." });
+        let update;
+        try { update = createResumeUpdate(req.body); }
+        catch (error) { return res.status(400).json({ message: error.message }); }
+        if (!update.resumePublicId.startsWith(`devtinder/resumes/${req.user._id}-`)) {
+            return res.status(400).json({ message: 'Invalid resume upload. Please upload the PDF again.' });
         }
-
-        const loggedInUser = req.user;
-        loggedInUser.resumeUrl = resumeUrl;
-        loggedInUser.resumeFileName = resumeFileName;
-        loggedInUser.resumePublicId = resumePublicId;
-        await loggedInUser.save();
-
-        // Tell the Java backend to process the resume in the background
-        try {
-            fetch("http://localhost:8080/api/ingestion/process", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    fileUrl: resumeUrl,
-                    candidateId: loggedInUser._id.toString(),
-                    fileName: resumeFileName
-                })
-            }).catch(err => console.error("Java ingestion failed:", err.message));
-        } catch (err) {
-            console.error("Fetch error:", err.message);
+        const uploadUrl = new URL(update.resumeUrl);
+        if (uploadUrl.hostname !== 'res.cloudinary.com'
+            || !decodeURIComponent(uploadUrl.pathname).endsWith('/' + update.resumePublicId)
+            || (process.env.CLOUDINARY_CLOUD_NAME
+                && !uploadUrl.pathname.startsWith(`/${process.env.CLOUDINARY_CLOUD_NAME}/raw/upload/`))) {
+            return res.status(400).json({ message: 'Resume URL does not match your uploaded file.' });
         }
-
+        const loggedInUser = await User.findOneAndUpdate(resumeVersionFilter(req.user),
+            { $set: update }, { new: true, runValidators: true });
+        if (!loggedInUser) {
+            return res.status(409).json({ message: 'Your resume changed during upload. Refresh and try again.' });
+        }
+        void retireResume(req.user, loggedInUser);
         res.json({
             message: "Resume uploaded successfully!",
             data: loggedInUser,
@@ -149,6 +156,34 @@ profileRouter.patch("/profile/resume", userAuth, async (req, res) => {
     } catch (err) {
         res.status(500).json({ message: "ERROR: " + err.message });
     }
+});
+
+profileRouter.delete('/profile/resume', userAuth, async (req, res) => {
+    try {
+        const user = await User.findOneAndUpdate(resumeVersionFilter(req.user),
+            { $unset: { resumeUrl: '', resumeFileName: '', resumePublicId: '', resumeDocumentId: '' } },
+            { new: true });
+        if (!user) return res.status(409).json({ message: 'Your resume changed. Refresh and try again.' });
+        void retireResume(req.user, user);
+        res.json({ message: 'Resume removed successfully!', data: user });
+    } catch (error) { res.status(500).json({ message: error.message }); }
+});
+
+// Recheck saved chat citations without making any AI calls.
+profileRouter.post('/profile/resume/active-sources', userAuth, async (req, res) => {
+    try {
+        const sources = req.body.sources;
+        if (!Array.isArray(sources) || sources.length > 100
+            || sources.some(source => !source || !User.base.isValidObjectId(source.candidateId))) {
+            return res.status(400).json({ message: 'Invalid resume sources.' });
+        }
+        const users = await User.find({ _id: { $in: sources.map(source => source.candidateId) } })
+            .select('resumeUrl resumeFileName resumeDocumentId').lean();
+        const byId = new Map(users.map(user => [user._id.toString(), user]));
+        res.json({ sources: sources.filter(source => sourceMatchesCurrentResume(source, byId.get(source.candidateId)))
+            .map(source => ({ documentId: source.documentId, candidateId: source.candidateId,
+                fileName: byId.get(source.candidateId).resumeFileName, fileUrl: byId.get(source.candidateId).resumeUrl })) });
+    } catch (error) { res.status(500).json({ message: 'Could not check current resumes.' }); }
 });
 
 profileRouter.patch("/profile/password", userAuth, async (req,res)=>{
