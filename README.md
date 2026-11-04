@@ -14,6 +14,12 @@ Node.js/Express API for **DevTinder** ("Tinder for developers"): auth, profiles,
 | Email | Custom transactional mail API (`PROMAIL_API_KEY`) |
 | Scheduling | `node-cron` (daily digest email) |
 
+## Sessions and developer search
+
+Login and signup issue JWTs with a **one-day (86,400-second) lifetime**, with matching one-day HttpOnly, Secure, SameSite=None cookies. HTTP authentication also enforces a one-day maximum token age, so an older seven-day token is rejected once it is over 24 hours old. Users with those older sessions will need to sign in again after deployment; no signing-key rotation is required.
+
+Authenticated `GET /user/search?q=am&page=1` searches first and last names by a case-insensitive **prefix**. For example, `am` matches Aman, Amanda and Amit. Query text must contain 2–80 characters; regex punctuation is treated literally. Results exclude the caller and contain only public profile fields, with 20 profiles per page and a `hasMore` flag. Responses use `{ users, page, hasMore }`; page numbers range from 1 to 1000. This endpoint uses MongoDB only, without fetching platform stats or calling AI services.
+
 ## Architecture
 
 ```mermaid
@@ -44,7 +50,7 @@ flowchart LR
     Java -- "writes integrations.* back" --> Mongo
 ```
 
-> ⚠️ The call to `integration-service` from `routes/profile.js` (resume ingestion webhook) is currently **hardcoded to `http://localhost:8080`** rather than reading an env var. It works when both services run locally together, but will need updating for a real multi-host deployment.
+Resume ingestion and cleanup use `STATS_SERVICE_URL`, with `http://localhost:8080` as the local fallback. Set the deployed Spring service's base URL in Render for production.
 
 ## Request flow: sign up → match → chat
 
@@ -61,7 +67,7 @@ sequenceDiagram
 
     U->>API: POST /signup (email, password, otp)
     API->>DB: verify OTP, create User
-    API-->>U: Set-Cookie: token (JWT, 7d)
+    API-->>U: Set-Cookie: token (JWT, 1d)
 
     U->>API: GET /user/feed
     API->>DB: users excluding self + existing connections
@@ -135,6 +141,7 @@ erDiagram
 | GET | `/profile/resume/destroy-signature` | ✅ | Signed payload to delete old resume from Cloudinary |
 | PATCH | `/profile/resume` | ✅ | Persist resume metadata; triggers ingestion in integration-service |
 | GET | `/user/feed` | ✅ | Paginated candidate feed (max 50/page) |
+| GET | `/user/search?q=am&page=1` | ✅ | Case-insensitive first/last-name prefix search; 20 public profiles/page, excludes self |
 | GET | `/user/requests/received` | ✅ | Incoming connection requests |
 | GET | `/user/connections` | ✅ | Accepted connections |
 | POST | `/request/send/:status/:toUserId` | ✅ | `status`: `interested` \| `ignored` |
@@ -220,8 +227,8 @@ Pinecone vectors and Mongo chunks. Set `STATS_SERVICE_URL` to the running
 integration service URL; it also retries retired search data every 60 seconds.
 Cleanup makes no AI calls. Indexing a new PDF still requires embeddings.
 
-Run the upload/deletion regression checks with `node --test tests/resumeLifecycle.test.cjs`.
+Run `npm test` for the CORS, resume lifecycle, one-day session, and authenticated developer-search regression checks. These tests use local fixtures and mocks, without connecting to a production database or sending email.
 
 ```bash
-curl http://localhost:7777/profile/view      # expect 401 without a session cookie — confirms the server is up
+curl http://localhost:7777/profile/view      # current middleware returns 400 "Invalid Token" without a session cookie
 ```

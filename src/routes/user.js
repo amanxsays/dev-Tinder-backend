@@ -3,8 +3,11 @@ const { userAuth } = require('../middleware/auth');
 const ConnectionRequest = require('../models/connectionRequests');
 const userRouter= express.Router();
 const User = require('../models/user')
+const { createDeveloperSearchHandler } = require('../utils/developerSearch');
 
 const SAFE_DATA ="firstName lastName gender photoUrl age about skills";
+
+userRouter.get('/user/search', userAuth, createDeveloperSearchHandler(User));
 
 userRouter.get("/user/requests/received" , userAuth, async (req,res)=>{
     try {
