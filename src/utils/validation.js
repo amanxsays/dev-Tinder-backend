@@ -7,7 +7,7 @@ const validateSignupData=(req)=>{
     if(firstName.length > 20) throw new Error("firstName is too large");
     if(lastName.length > 20) throw new Error("lastName is too large");
     if(!validater.isEmail(emailId)) throw new Error("Email id is invalid : "+emailId);
-    if(!validater.isStrongPassword(password)) throw new Error("Password is too weak: "+password);
+    if(!validater.isStrongPassword(password)) throw new Error("Password is too weak");
 }
 
 const validateEditProfileData=(req)=>{

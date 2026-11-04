@@ -1,42 +1,22 @@
 const express= require('express');
 const User= require('../models/user');
 const {validateSignupData} = require('../utils/validation');
-const bcrypt=require('bcrypt');
 const { sendEmail }= require("../utils/send-email");
 const Otp = require('../models/otp');
 const otpTemplate= require("../utils/templates/otpTemplate");
-const registerationTemplate = require('../utils/templates/registerationTemplate');
 const { sessionCookieOptions } = require('../utils/sessionPolicy');
+const authService = require('../services/authService');
+const { userDto } = require('../utils/userDto');
 
 const authRouter=express.Router();
 
-authRouter.post("/signup", async (req,res)=>{
+authRouter.post('/signup', async (req, res) => {
     try {
-        validateSignupData(req);
-        //encrypt password
-        const { firstName, lastName, emailId, password, otp}=req.body;
-
-        //otp verification
-        const emailOfOtp=await Otp.findOne({emailId: emailId});
-        if(otp!=emailOfOtp?.otp) throw new Error("Invalid Otp");
-        await Otp.deleteOne({emailId: emailId});
-        
-        const photoUrl ="https://api.dicebear.com/9.x/fun-emoji/svg?seed="+(firstName+lastName).replaceAll(" ", "");
-        const hashPass= await bcrypt.hash(password, 10);
-
-        const user1= new User({firstName:firstName, lastName:lastName, emailId:emailId, password:hashPass, photoUrl:photoUrl});
-        await user1.save();
-        const token= await user1.getJWT();
-        res.cookie("token", token, sessionCookieOptions());
-        sendEmail(emailId,`Welcome ${firstName} !`,"",registerationTemplate(firstName,lastName));
-        res.json({
-            message:"User Added Successfully",
-            data:user1
-        });
-    } catch (error) {
-        res.status(400).send("Error: " +error.message)
-    }
-})
+        const user = await authService.signup(req.body || {});
+        res.cookie('token', await user.getJWT(), sessionCookieOptions());
+        res.json({ message: 'User Added Successfully', data: userDto(user) });
+    } catch { res.status(400).send('Error: Could not create account. Check your details and OTP.'); }
+});
 
 authRouter.post("/otp", async (req,res)=>{
     try {
@@ -63,30 +43,16 @@ authRouter.post("/otp", async (req,res)=>{
     }
 })
 
-authRouter.post("/login", async (req,res)=>{
+authRouter.post('/login', async (req, res) => {
     try {
-        const {emailId, password}=req.body;
-        const user= await User.findOne({emailId: emailId});
-        if(!user) throw new Error("Invalid credentials");
-        const verifyPass= await user.validatePass(password);
-        if(!verifyPass) throw new Error("Invalid credentials");
-        else{
-            //make a token and wrap inside cookie and send back by res
-            const token= await user.getJWT();
-            res.cookie("token", token, sessionCookieOptions());
-            res.json({
-                message: user.firstName+" logged in Successfully...🫂",
-                data:user
-            });
-        }
-        
-    } catch (error) {
-        res.status(400).send("Error: " +error.message)
-    }
-})
+        const user = await authService.login(req.body || {});
+        res.cookie('token', await user.getJWT(), sessionCookieOptions());
+        res.json({ message: user.firstName + ' logged in successfully.', data: userDto(user) });
+    } catch { res.status(400).send('Error: Invalid credentials'); }
+});
 
 authRouter.post("/logout", async (req,res)=>{
-    res.clearCookie("token");
+    res.clearCookie('token', { httpOnly: true, secure: true, sameSite: 'none' });
     res.send("Logout Successfully");
 })
 

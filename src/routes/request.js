@@ -3,6 +3,7 @@ const requestRouter=express.Router();
 const { userAuth }= require('../middleware/auth');
 const ConnectionRequest= require('../models/connectionRequests');
 const User = require('../models/user');
+const { persistWithNotification, notificationEvent } = require('../services/notificationService');
 
 requestRouter.post("/request/send/:status/:toUserId", userAuth, async (req,res) => {
     try {
@@ -20,7 +21,12 @@ requestRouter.post("/request/send/:status/:toUserId", userAuth, async (req,res) 
         })
         if(existingRequest) throw new Error("Connection Request already present !!");
         const data=new ConnectionRequest({toUserId:toUserId ,fromUserId:fromUserId, status:status});
-        await data.save();
+        await persistWithNotification(session => {
+            // Mongo may retry a transaction. Recreate the document with the same ID each time.
+            const fresh = new ConnectionRequest({ _id: data._id, toUserId, fromUserId, status });
+            return fresh.save(session ? { session } : undefined);
+        },
+            status === 'interested' ? notificationEvent('connection_request', data._id, toUserId) : null);
         res.send(req.user.firstName +(status=="interested"?" is ":" ")+status+(status=="interested"?" in ":" ")+ toUser.firstName);
     } catch (error) {
         res.status(400).send("Error: " +error.message);

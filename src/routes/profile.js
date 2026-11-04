@@ -7,6 +7,7 @@ const { enrichProfileWithStats } = require('../utils/fetchStats');
 const ConnectionRequest = require("../models/connectionRequests");
 const bcrypt=require('bcrypt');
 const User = require('../models/user');
+const { userDto } = require('../utils/userDto');
 const { randomUUID } = require('node:crypto');
 const { resumeVersionFilter, createResumeUpdate, notifyResumeService, sourceMatchesCurrentResume } = require('../utils/resumeLifecycle');
 
@@ -16,7 +17,7 @@ const { cloudinary } = require("../utils/resumeUpload");
 profileRouter.get("/profile/view", userAuth, async (req,res)=>{
     try {
         const fullProfile = await enrichProfileWithStats(req.user);
-        res.send(fullProfile);
+        res.send(userDto(fullProfile));
     } catch (error) {
         res.status(400).send("Error: " +error.message)
     }
@@ -42,7 +43,7 @@ profileRouter.get("/profile/view/:userId", userAuth, async (req, res) => {
             delete finalProfile.password;
             delete finalProfile.emailId;
         }
-        res.json(finalProfile);
+        res.json(userDto(finalProfile));
     } catch (error) {
         res.status(400).send("Error: " + error.message);
     }
@@ -56,7 +57,7 @@ profileRouter.patch("/profile/edit", userAuth, async (req,res)=>{
        await loggedInUser.save();
        res.json({
         message:`${loggedInUser.firstName} ! Profile updated ✅`,
-        data:loggedInUser
+        data:userDto(loggedInUser)
        })
     } catch (error) {
         res.status(400).send("Error: " +error.message)
@@ -151,7 +152,7 @@ profileRouter.patch("/profile/resume", userAuth, async (req, res) => {
         void retireResume(req.user, loggedInUser);
         res.json({
             message: "Resume uploaded successfully!",
-            data: loggedInUser,
+            data: userDto(loggedInUser),
         });
     } catch (err) {
         res.status(500).json({ message: "ERROR: " + err.message });
@@ -165,7 +166,7 @@ profileRouter.delete('/profile/resume', userAuth, async (req, res) => {
             { new: true });
         if (!user) return res.status(409).json({ message: 'Your resume changed. Refresh and try again.' });
         void retireResume(req.user, user);
-        res.json({ message: 'Resume removed successfully!', data: user });
+        res.json({ message: 'Resume removed successfully!', data: userDto(user) });
     } catch (error) { res.status(500).json({ message: error.message }); }
 });
 
