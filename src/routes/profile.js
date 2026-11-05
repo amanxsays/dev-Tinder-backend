@@ -13,6 +13,7 @@ const { resumeVersionFilter, createResumeUpdate, notifyResumeService, sourceMatc
 
 const profileRouter=express.Router();
 const { cloudinary } = require("../utils/resumeUpload");
+const { cloudinaryConfig } = require('../utils/cloudinaryConfig');
 
 profileRouter.get("/profile/view", userAuth, async (req,res)=>{
     try {
@@ -68,6 +69,9 @@ profileRouter.patch("/profile/edit", userAuth, async (req,res)=>{
 // GET a signed payload so the browser can upload the resume straight to Cloudinary
 profileRouter.get("/profile/resume/upload-signature", userAuth, (req, res) => {
     try {
+        let config;
+        try { config = cloudinaryConfig(); }
+        catch { return res.status(503).json({ message: 'Resume storage is not configured. Please contact support.' }); }
         const timestamp = Math.round(Date.now() / 1000);
         // Raw assets need the file extension in their public ID.
         const publicId = `${req.user._id}-${randomUUID()}.pdf`;
@@ -75,7 +79,7 @@ profileRouter.get("/profile/resume/upload-signature", userAuth, (req, res) => {
 
         const signature = cloudinary.utils.api_sign_request(
             { folder, public_id: publicId, timestamp },
-            process.env.CLOUDINARY_API_SECRET
+            config.apiSecret
         );
 
         res.json({
@@ -83,8 +87,8 @@ profileRouter.get("/profile/resume/upload-signature", userAuth, (req, res) => {
             signature,
             publicId,
             folder,
-            apiKey: process.env.CLOUDINARY_API_KEY,
-            cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+            apiKey: config.apiKey,
+            cloudName: config.cloudName,
         });
     } catch (err) {
         res.status(500).json({ message: "ERROR: " + err.message });
