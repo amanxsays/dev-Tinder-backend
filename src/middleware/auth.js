@@ -1,24 +1,23 @@
 const User= require('../models/user');
-const jwt= require('jsonwebtoken');
-const { SESSION_TTL_SECONDS } = require('../utils/sessionPolicy');
+const { requestSession } = require('../utils/authSession');
 
 const userAuth= async (req,res,next)=>{
     try {
-        const cookies=req.cookies;
-        const {token}=cookies;
-        if(!token) throw new Error("Invalid Token");
-        
-        const decodeToken= await jwt.verify(token, process.env.JWT_KEY, { maxAge: SESSION_TTL_SECONDS });
+        const decodeToken = requestSession(req);
         const { _id }=decodeToken;
 
         const user= await User.findById(_id);
         if(!user) throw new Error("User Does Not Exist !!!!");
 
         req.user=user;
+        req.sessionClaims=decodeToken;
         next();
 
     } catch (error) {
-        res.status(400).send("Error: " +error.message)
+        const expected = ['JsonWebTokenError', 'TokenExpiredError', 'NotBeforeError'].includes(error.name)
+            || ['Invalid Token', 'User Does Not Exist !!!!'].includes(error.message);
+        if (expected) res.status(400).send('Error: ' + error.message);
+        else res.status(503).send('Session verification is temporarily unavailable.');
     }
 }
 

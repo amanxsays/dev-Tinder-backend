@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "node --test tests/*.test.cjs",
+    "firebase:check": "node scripts/check-firebase.cjs",
     "start": "node src/app.js",
     "dev": "nodemon src/app.js"
   },
@@ -23,6 +24,7 @@
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.0",
     "express": "^5.1.0",
+    "firebase-admin": "^14.5.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.16.3",
     "multer": "^2.3.0",

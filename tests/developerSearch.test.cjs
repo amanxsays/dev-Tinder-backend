@@ -87,7 +87,7 @@ test('the real search route requires a valid existing JWT cookie', async t => {
     process.env.JWT_KEY = 'local-search-test-key';
     const { model } = database([{ _id: 'other', firstName: 'Amanda' }]);
     User.find = model.find;
-    User.findById = async () => ({ _id: 'self' });
+    User.findById = async () => ({ _id: '507f1f77bcf86cd799439011' });
     const app = express();
     app.use(cookieParser());
     app.use(userRouter);
@@ -103,7 +103,7 @@ test('the real search route requires a valid existing JWT cookie', async t => {
     const anonymous = await fetch(url, { signal: AbortSignal.timeout(5000) });
     assert.equal(anonymous.status, 400);
     assert.match(await anonymous.text(), /Invalid Token/);
-    const token = jwt.sign({ _id: 'self' }, process.env.JWT_KEY, { expiresIn: '1d' });
+    const token = jwt.sign({ _id: '507f1f77bcf86cd799439011' }, process.env.JWT_KEY, { expiresIn: '1d' });
     const authenticated = await fetch(url, { headers: { Cookie: 'token=' + token }, signal: AbortSignal.timeout(5000) });
     assert.equal(authenticated.status, 200);
     assert.equal((await authenticated.json()).users[0].firstName, 'Amanda');
