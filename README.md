@@ -16,7 +16,7 @@ Node.js/Express API for **DevTinder** ("Tinder for developers"): auth, profiles,
 
 ## Sessions and developer search
 
-Login and signup issue JWTs with a **one-day (86,400-second) lifetime**, with matching one-day HttpOnly, Secure, SameSite=None cookies. HTTP authentication also enforces a one-day maximum token age, so an older seven-day token is rejected once it is over 24 hours old. Users with those older sessions will need to sign in again after deployment; no signing-key rotation is required.
+Browser login and signup issue JWTs with a **one-day (86,400-second) lifetime**, with matching one-day HttpOnly, Secure, SameSite=None cookies. Browser HTTP authentication also enforces a one-day maximum token age, so an older seven-day token is rejected once it is over 24 hours old. Users with those older sessions will need to sign in again after deployment; no signing-key rotation is required.
 
 Authenticated `GET /user/search?q=am&page=1` searches first and last names by a case-insensitive **prefix**. For example, `am` matches Aman, Amanda and Amit. Query text must contain 2–80 characters; regex punctuation is treated literally. Results exclude the caller and contain only public profile fields, with 20 profiles per page and a `hasMore` flag. Responses use `{ users, page, hasMore }`; page numbers range from 1 to 1000. This endpoint uses MongoDB only, without fetching platform stats or calling AI services.
 
@@ -227,11 +227,11 @@ Pinecone vectors and Mongo chunks. Set `STATS_SERVICE_URL` to the running
 integration service URL; it also retries retired search data every 60 seconds.
 Cleanup makes no AI calls. Indexing a new PDF still requires embeddings.
 
-Run `npm test` for CORS, resume lifecycle, one-day sessions, authenticated developer search, Android authentication, secure sockets, push installation ownership, transactional notification events, and streaming gateway regression checks. These tests use local fixtures and mocks, without connecting to a production database, sending email, or contacting Firebase/Gemini.
+Run `npm test` for CORS, resume lifecycle, browser/mobile session policies, authenticated developer search, Android authentication, secure sockets, push installation ownership, transactional notification events, and streaming gateway regression checks. These tests use local fixtures and mocks, without connecting to a production database, sending email, or contacting Firebase/Gemini.
 
 ## Android sessions and secure messaging
 
-The web application continues using the existing HTTP-only, Secure, SameSite=None cookie. Android calls `POST /mobile/login` or `POST /mobile/signup` with the same credential/OTP fields as the browser endpoints. The response is `{ message, data, token, expiresAt }`; `data` excludes password hashes. The Android JWT has issuer `devtinder-api`, audience `devtinder-android`, and exactly the existing one-day lifetime. It is not a Firebase Auth token, and there is no refresh-token endpoint.
+The web application continues using the existing HTTP-only, Secure, SameSite=None cookie. Android calls `POST /mobile/login` or `POST /mobile/signup` with the same credential/OTP fields as the browser endpoints. The response is `{ message, data, token, expiresAt }`; `data` excludes password hashes. The Android JWT has issuer `devtinder-api`, audience `devtinder-android`, and a ten-day (864,000-second) lifetime. HTTP and Socket.IO enforce the same ten-day native maximum age; browser JWTs and cookies remain one day. The response expiresAt exactly matches the issued token expiry. Existing one-day Android tokens expire as originally issued; users receive the longer duration on their next login/signup. Update the Android build together with this backend change because older builds only accept one-day saved sessions. It is not a Firebase Auth token, and there is no refresh-token endpoint.
 
 Protected routes accept `Authorization: Bearer <native JWT>` or the existing cookie. A supplied invalid bearer token never falls back to a cookie. Native storage must encrypt the token using Android Keystore; never put it into browser localStorage. Browser login/signup and profile responses no longer return password hashes.
 
@@ -279,7 +279,7 @@ Dependency review: the existing baseline has 18 npm audit findings (3 moderate, 
 
 Installation IDs contain 16–128 ASCII letters/digits/underscores/hyphens. Secrets contain 32–256 of those characters and must be generated with secure randomness; store them with the native encrypted installation state. Tokens have a bounded size and are never returned. Include `X-Installation-Binding` on rotation and revocation whenever known: a stale binding returns 409 and cannot disable a newly signed-in account. Network clients should retain failed revocation details for a later retry, while disabling local notification display immediately.
 
-The secret is hashed on the server. Registering an existing ID requires its secret; initial registration uses insert-only semantics so concurrent claims cannot overwrite ownership. Account changes create a new binding; authenticated renewals for the same active account preserve it. Tokens/installation IDs have unique indexes. Multiple phones per user are supported. Subscriptions expire 30 days after the last authenticated renewal, independently of the one-day JWT. Generic alerts can continue after JWT expiry, but opening protected content requires signing in again.
+The secret is hashed on the server. Registering an existing ID requires its secret; initial registration uses insert-only semantics so concurrent claims cannot overwrite ownership. Account changes create a new binding; authenticated renewals for the same active account preserve it. Tokens/installation IDs have unique indexes. Multiple phones per user are supported. Subscriptions expire 30 days after the last authenticated renewal, independently of the ten-day Android JWT. Generic alerts can continue after JWT expiry, but opening protected content requires signing in again.
 
 ### Persistence, delivery and limitations
 

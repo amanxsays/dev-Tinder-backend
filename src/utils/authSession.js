@@ -1,12 +1,12 @@
 const jwt = require('jsonwebtoken');
-const { SESSION_TTL_SECONDS } = require('./sessionPolicy');
+const { SESSION_TTL_SECONDS, MOBILE_SESSION_TTL_SECONDS } = require('./sessionPolicy');
 
 const MOBILE_AUDIENCE = 'devtinder-android';
 const MOBILE_ISSUER = 'devtinder-api';
 
 function issueMobileToken(user) {
     return jwt.sign({ _id: String(user._id) }, process.env.JWT_KEY, {
-        algorithm: 'HS256', expiresIn: SESSION_TTL_SECONDS,
+        algorithm: 'HS256', expiresIn: MOBILE_SESSION_TTL_SECONDS,
         audience: MOBILE_AUDIENCE, issuer: MOBILE_ISSUER,
     });
 }
@@ -14,7 +14,7 @@ function issueMobileToken(user) {
 function verifySession(token, mobile = false) {
     if (typeof token !== 'string' || !token || token.length > 8192) throw new Error('Invalid Token');
     const claims = jwt.verify(token, process.env.JWT_KEY, {
-        algorithms: ['HS256'], maxAge: SESSION_TTL_SECONDS,
+        algorithms: ['HS256'], maxAge: mobile ? MOBILE_SESSION_TTL_SECONDS : SESSION_TTL_SECONDS,
         ...(mobile ? { audience: MOBILE_AUDIENCE, issuer: MOBILE_ISSUER } : {}),
     });
     if (!claims || !/^[a-f\d]{24}$/i.test(claims._id || '') || !Number.isFinite(claims.exp)) {

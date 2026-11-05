@@ -1,7 +1,7 @@
 const express = require('express');
+const jwt = require('jsonwebtoken');
 const { issueMobileToken } = require('../utils/authSession');
 const { userDto } = require('../utils/userDto');
-const { SESSION_TTL_SECONDS } = require('../utils/sessionPolicy');
 const authService = require('../services/authService');
 
 function createMobileAuthRouter(service = authService) {
@@ -11,9 +11,10 @@ function createMobileAuthRouter(service = authService) {
             res.set('Cache-Control', 'no-store');
             try {
                 const user = await service[action](req.body || {});
+                const token = issueMobileToken(user);
                 res.json({ message: action === 'login' ? 'Signed in successfully.' : 'User Added Successfully',
-                    data: userDto(user), token: issueMobileToken(user),
-                    expiresAt: new Date(Date.now() + SESSION_TTL_SECONDS * 1000).toISOString() });
+                    data: userDto(user), token,
+                    expiresAt: new Date(jwt.decode(token).exp * 1000).toISOString() });
             } catch {
                 res.status(400).json({ message: action === 'login' ? 'Invalid credentials' : 'Could not create account. Check your details and OTP.' });
             }

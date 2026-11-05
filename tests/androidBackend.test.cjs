@@ -30,11 +30,11 @@ async function listen(t, app) {
     return `http://127.0.0.1:${server.address().port}`;
 }
 
-test('native session has exact one-day expiry and strict audience/issuer', t => {
+test('native session has exact ten-day expiry and strict audience/issuer', t => {
     key(t);
     const token = issueMobileToken({ _id: USER });
     const claims = verifySession(token, true);
-    assert.equal(claims.exp - claims.iat, 86400);
+    assert.equal(claims.exp - claims.iat, 864000);
     assert.equal(claims.aud, 'devtinder-android');
     assert.equal(claims.iss, 'devtinder-api');
     assert.throws(() => verifySession(jwt.sign({ _id: USER }, SECRET, { expiresIn: '1d' }), true));
@@ -69,10 +69,31 @@ test('mobile login and signup share services but never expose password hashes or
         const body = await response.json();
         assert.deepEqual(body.data, { _id: USER, firstName: 'Aman' });
         assert.equal(verifySession(body.token, true)._id, USER);
-        assert.ok(Date.parse(body.expiresAt) > Date.now());
+        const claims = verifySession(body.token, true);
+        assert.equal(claims.exp - claims.iat, 864000);
+        assert.equal(Date.parse(body.expiresAt), claims.exp * 1000);
     }
     assert.deepEqual(calls.map(([action]) => action), ['login', 'signup']);
     assert.equal(userDto({ toObject: () => ({ password: 'private', _id: USER }) }).password, undefined);
+});
+
+test('HTTP and socket native sessions work after day one and reject tokens older than ten days', t => {
+    key(t);
+    const now = Math.floor(Date.now() / 1000);
+    const tokenAtAge = seconds => jwt.sign({ _id: USER, iat: now - seconds }, SECRET,
+        { expiresIn: '20d', audience: 'devtinder-android', issuer: 'devtinder-api' });
+    for (const age of [2 * 86400, 10 * 86400 - 10]) {
+        const token = tokenAtAge(age);
+        assert.equal(requestSession({ headers: { authorization: 'Bearer ' + token } })._id, USER);
+        assert.equal(socketSession({ auth: { token } })._id, USER);
+        assert.throws(() => verifySession(token, false));
+    }
+    const tooOld = tokenAtAge(10 * 86400 + 10);
+    assert.throws(() => requestSession({ headers: { authorization: 'Bearer ' + tooOld } }));
+    assert.throws(() => socketSession({ auth: { token: tooOld } }));
+    const oldShortToken = jwt.sign({ _id: USER, iat: now - 86410 }, SECRET,
+        { expiresIn: '1d', audience: 'devtinder-android', issuer: 'devtinder-api' });
+    assert.throws(() => verifySession(oldShortToken, true));
 });
 
 test('connection authorization rejects strangers and malformed targets before database access', async () => {
