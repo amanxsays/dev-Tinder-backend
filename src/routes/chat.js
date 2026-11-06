@@ -24,6 +24,16 @@ chatRouter.get("/chat/:targetUserId", userAuth, async (req, res) => {
       })
       await chat.save();
     }
+    if (req.query.sync === '1') {
+      const { chatWindow } = require('../utils/chatHistory');
+      if (req.query.after !== undefined && (typeof req.query.after !== 'string' || !/^[a-f0-9]{24}$/i.test(req.query.after))) {
+        return res.status(400).json({ message: 'Invalid chat cursor.' });
+      }
+      if (req.query.before !== undefined && (typeof req.query.before !== 'string' || !/^[a-f0-9]{24}$/i.test(req.query.before) || req.query.after)) {
+        return res.status(400).json({ message: 'Invalid chat cursor.' });
+      }
+      return res.json(chatWindow(chat.messages, req.query.after, 300, req.query.before));
+    }
     res.json(chat);
   } catch (error) {
     res.status(/Invalid|accepted connection/.test(error.message) ? 403 : 503)
