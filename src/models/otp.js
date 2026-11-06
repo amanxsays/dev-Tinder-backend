@@ -12,6 +12,7 @@ const otpSchema = new mongoose.Schema({
         throw new Error("Email id is invalid : " + value);
     },
   },
+  deliveryState: { type: String, enum: ['pending', 'sent'], default: 'sent' },
   otp: {
     type: String,
     required: true,
