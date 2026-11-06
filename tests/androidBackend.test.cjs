@@ -197,7 +197,7 @@ test('device proof guards rebind, rotation, expiry and offline-capable revocatio
 test('dispatcher has private, bounded payloads and cleans invalid tokens without deleting refreshed registrations', async () => {
     const event = { _id: 'event-db', leaseOwner: 'lease', ...notificationEvent('message', 'msg-id', TARGET, USER), deliveredBindings: [] };
     const installation = { _id: 'installation-db', installationId: 'installation', token: 'token', bindingId: 'binding' };
-    assert.deepEqual(Object.keys(pushData(event, installation)).sort(), ['bindingId', 'createdAt', 'eventId', 'expiresAt', 'targetUserId', 'type']);
+    assert.deepEqual(Object.keys(pushData(event, installation)).sort(), ['bindingId', 'createdAt', 'eventId', 'expiresAt', 'messagePreview', 'senderName', 'targetUserId', 'type']);
     const removed = [], saved = [], sent = [];
     const Installations = { find: () => ({ select: async () => [installation] }), findOne: async () => installation,
         deleteOne: async query => removed.push(query) };
@@ -343,4 +343,22 @@ test('dispatcher resumes an expired lease and records transient failure for a bo
         assert.equal(final.$set.failureCode, 'dispatch_unavailable');
         assert.ok(final.$set.nextAttemptAt > new Date());
     } finally { stop(); }
+});
+
+test('message previews use the authenticated sender and are queued with successful persistence', async () => {
+    let outbox;
+    const message = await saveMessage({ _id: USER, firstName: 'Riya', lastName: 'Dev' }, TARGET, 'Hello Aman', {
+        Connections: { findOne: async () => ({ status: 'accepted' }) },
+        Chats: { findOne: async () => ({ messages: [], save: async () => {} }) },
+        persist: async (save, event) => { await save(null); outbox = event; },
+    });
+    assert.equal(message.text, 'Hello Aman');
+    assert.equal(outbox.senderName, 'Riya Dev');
+    assert.equal(outbox.messagePreview, 'Hello Aman');
+    const data = pushData({ ...outbox, senderName: 'R'.repeat(200), messagePreview: 'x'.repeat(16000) }, { bindingId: 'binding' });
+    assert.equal(data.senderName.length, 80);
+    assert.equal(data.messagePreview.length, 240);
+    assert.equal(data.targetUserId, USER);
+    const request = pushData(notificationEvent('connection_request', 'request', TARGET), { bindingId: 'binding' });
+    assert.equal(request.messagePreview, undefined);
 });
