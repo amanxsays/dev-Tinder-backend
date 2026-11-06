@@ -15,6 +15,8 @@ const profileRouter=express.Router();
 const { cloudinary } = require("../utils/resumeUpload");
 const { cloudinaryConfig } = require('../utils/cloudinaryConfig');
 
+profileRouter.get('/session', userAuth, (req, res) => res.json(userDto(req.user)));
+
 profileRouter.get("/profile/view", userAuth, async (req,res)=>{
     try {
         const fullProfile = await enrichProfileWithStats(req.user);
@@ -65,6 +67,25 @@ profileRouter.patch("/profile/edit", userAuth, async (req,res)=>{
     }
 })
 
+
+// Signed image uploads stay within this authenticated user's avatar namespace.
+profileRouter.get('/profile/photo/upload-signature', userAuth, (req, res) => {
+    try {
+        const config = cloudinaryConfig();
+        const params = { timestamp: Math.floor(Date.now() / 1000), folder: 'devtinder/avatars',
+            public_id: `${req.user._id}-${randomUUID()}`, allowed_formats: 'jpg,jpeg,png,webp',
+            transformation: 'c_limit,h_1024,w_1024' };
+        res.json({ params, signature: cloudinary.utils.api_sign_request(params, config.apiSecret), apiKey: config.apiKey, cloudName: config.cloudName });
+    } catch { res.status(503).json({ message: 'Photo storage is temporarily unavailable.' }); }
+});
+profileRouter.patch('/profile/photo', userAuth, async (req, res) => {
+    try {
+        const { verifiedPhoto } = require('../utils/profilePhoto');
+        const url = verifiedPhoto(req.body, String(req.user._id), cloudinaryConfig(), cloudinary);
+        req.user.photoUrl = url; await req.user.save();
+        res.json({ message: 'Profile photo updated.', data: userDto(req.user) });
+    } catch { res.status(400).json({ message: 'Could not save this photo. Your previous photo is unchanged.' }); }
+});
 
 // GET a signed payload so the browser can upload the resume straight to Cloudinary
 profileRouter.get("/profile/resume/upload-signature", userAuth, (req, res) => {
