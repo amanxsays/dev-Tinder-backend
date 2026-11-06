@@ -1,6 +1,19 @@
 const axios = require('axios');
 const validator = require('validator');
 
+function emailFailureReason(cause) {
+    const message = String(cause?.response?.data?.message || '').toLowerCase();
+    const status = Number(cause?.response?.status) || 0;
+    if (/unrecogni[sz]ed ip|unauthori[sz]ed ip|ip address.*(not|block|authori)|ip.*not.*verified/.test(message)) return 'IP_NOT_AUTHORIZED';
+    if (/key not found|invalid.*key|key.*invalid|missing.*key|key.*expired|key.*revoked/.test(message)) return 'API_KEY_REJECTED';
+    if (/permission|scope|access.*denied/.test(message)) return 'PERMISSION_DENIED';
+    if (/sender|domain/.test(message)) return 'SENDER_NOT_AUTHORIZED';
+    if (status === 401) return 'AUTHENTICATION_REJECTED';
+    if (status === 403) return 'ACCESS_DENIED';
+    if (status === 429) return 'PROVIDER_LIMIT';
+    return 'PROVIDER_UNAVAILABLE';
+}
+
 function createEmailSender({ env = process.env, post = axios.post } = {}) {
     return async (to, subject, text, html) => {
         const provider = (env.EMAIL_PROVIDER || 'promail').trim().toLowerCase();
@@ -31,10 +44,10 @@ function createEmailSender({ env = process.env, post = axios.post } = {}) {
             // Never log axios config/headers, email bodies, OTPs or provider responses.
             const status = Number(cause.response?.status) || 0;
             const safeCode = /^[A-Z_0-9]+$/.test(cause.code || '') ? cause.code : 'EMAIL_PROVIDER_ERROR';
-            console.warn(`Email delivery unavailable: provider=${provider}, status=${status}, code=${safeCode}`);
+            console.warn(`Email delivery unavailable: provider=${provider}, status=${status}, code=${safeCode}, reason=${emailFailureReason(cause)}`);
             const error = new Error('Verification email could not be sent. Please try again later.');
             error.code = 'EMAIL_UNAVAILABLE'; throw error;
         }
     };
 }
-module.exports = { sendEmail: createEmailSender(), createEmailSender };
+module.exports = { sendEmail: createEmailSender(), createEmailSender, emailFailureReason };

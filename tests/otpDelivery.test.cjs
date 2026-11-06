@@ -54,3 +54,13 @@ test('Brevo uses HTTPS and a verified sender configuration, with a bounded timeo
     const unavailable = createEmailSender({ env: { EMAIL_PROVIDER: 'brevo' }, post: async () => assert.fail('must not send') });
     await assert.rejects(unavailable('recipient@example.test', 'Verify', '', ''), e => e.code === 'EMAIL_CONFIGURATION');
 });
+
+test('mail diagnostic reasons distinguish IP, key and scope failures without exposing raw responses', () => {
+    const { emailFailureReason } = require('../src/utils/send-email');
+    const error = (status, message) => ({ response: { status, data: { message } } });
+    assert.equal(emailFailureReason(error(401, 'We have detected you are using an unrecognised IP address')), 'IP_NOT_AUTHORIZED');
+    assert.equal(emailFailureReason(error(401, 'Key not found')), 'API_KEY_REJECTED');
+    assert.equal(emailFailureReason(error(403, 'Permission denied for this scope')), 'PERMISSION_DENIED');
+    assert.equal(emailFailureReason(error(401, 'private-key-and-email-fixture')), 'AUTHENTICATION_REJECTED');
+    assert.equal(emailFailureReason(error(400, 'Sender is not verified')), 'SENDER_NOT_AUTHORIZED');
+});
