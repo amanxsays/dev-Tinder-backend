@@ -11,7 +11,7 @@ Node.js/Express API for **DevTinder** ("Tinder for developers"): auth, profiles,
 | Auth | JWT (`jsonwebtoken`) in an httpOnly cookie + `bcrypt` password hashing |
 | Real-time | Socket.IO |
 | File storage | Cloudinary (browser uploads directly, via signed signatures issued by this API) |
-| Email | Custom transactional mail API (`PROMAIL_API_KEY`) |
+| Email | HTTPS transactional mail API (Brevo or legacy ProMail) |
 | Scheduling | `node-cron` (daily digest email) |
 
 ## Sessions and developer search
@@ -201,6 +201,11 @@ CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 
+# Free HTTPS option: verify your sender in Brevo first.
+EMAIL_PROVIDER=brevo
+EMAIL_FROM=
+BREVO_API_KEY=
+# Legacy provider, used only with EMAIL_PROVIDER=promail:
 PROMAIL_API_KEY=
 EMAIL_KEY=
 
@@ -300,3 +305,5 @@ Disable `PUSH_NOTIFICATIONS_ENABLED` to stop new notification events/dispatch wi
 ```bash
 curl http://localhost:7777/profile/view      # current middleware returns 400 "Invalid Token" without a session cookie
 ```
+
+OTP email setup and incident details: [docs/OTP-EMAIL.md](docs/OTP-EMAIL.md).

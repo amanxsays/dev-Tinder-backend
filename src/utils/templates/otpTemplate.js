@@ -1,4 +1,4 @@
-const otpTemplate = (OTP) => {
+﻿const otpTemplate = (OTP) => {
   return `
 <html>
 <head>
@@ -38,14 +38,14 @@ const otpTemplate = (OTP) => {
   <div class="container">
     <div class="header">
       <img class="logo" src="http://34.171.74.126/image.png" alt="DevTinder Logo" />
-      <h2>Hello 👋🏻</h2>
+      <h2>Hello ðŸ‘‹ðŸ»</h2>
       <p>Your One-Time Password (OTP) is:</p>
     </div>
     <div class="otp">${OTP}</div>
-    <p style="text-align:center">Please use this code to verify your identity. This code is valid for 2 minutes.</p>
+    <p style="text-align:center">Please use this code to verify your identity. This code is valid for 5 minutes.</p>
     <div class="footer">
       <p>If you did not request this, please ignore this email.</p>
-      <p>— DevTinder Team</p>
+      <p>â€” DevTinder Team</p>
     </div>
   </div>
 </body>

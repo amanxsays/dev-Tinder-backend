@@ -3,6 +3,7 @@ const User = require('../models/user');
 const Otp = require('../models/otp');
 const { validateSignupData } = require('../utils/validation');
 const { sendEmail } = require('../utils/send-email');
+const { validOtp } = require('./otpService');
 const registrationTemplate = require('../utils/templates/registerationTemplate');
 
 async function login(body) {
@@ -17,7 +18,7 @@ async function signup(body) {
     const { firstName, lastName, password, otp } = body;
     const emailId = body.emailId.trim().toLowerCase();
     const verification = await Otp.findOne({ emailId });
-    if (!verification || String(otp) !== String(verification.otp)) throw new Error('Invalid Otp');
+    if (!validOtp(verification, otp)) throw new Error('Invalid Otp');
     // Do not consume a valid code until the user has actually been saved.
     const user = new User({ firstName, lastName, emailId,
         password: await bcrypt.hash(password, 10),
