@@ -27,3 +27,9 @@ Official references:
 - https://developers.brevo.com/docs/send-a-transactional-email
 - https://help.brevo.com/hc/en-us/articles/14925263522578-Comply-with-Gmail-Yahoo-and-Microsoft-s-requirements-for-email-senders
 - https://help.brevo.com/hc/en-us/articles/208580669-FAQs-What-are-the-limits-of-the-Free-plan
+
+## Persistent HTTP 401
+
+A 401 can indicate a rejected key or an unauthorized source IP. Check Brevo Settings > Security > Authorized IPs and its security email for the failed request's IP. Only approve the IP after matching it to the existing Render service outbound addresses; do not disable the security control globally. Render outbound addresses are shown in its dashboard. The restricted API key needs Transactional email All. `EMAIL_KEY` is the legacy SMTP credential; Brevo reads only `BREVO_API_KEY`.
+
+Logs now include a fixed reason enum: IP_NOT_AUTHORIZED, API_KEY_REJECTED, PERMISSION_DENIED, SENDER_NOT_AUTHORIZED, AUTHENTICATION_REJECTED, ACCESS_DENIED, PROVIDER_LIMIT or PROVIDER_UNAVAILABLE. No raw provider response or key is logged. Generic authentication rejection is not enough to infer which credential or restriction is wrong.
