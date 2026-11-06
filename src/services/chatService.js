@@ -31,7 +31,9 @@ async function saveMessage(user, targetUserId, text, options = {}) {
         chat.messages.push(message);
         await chat.save(session ? { session } : undefined);
         return chat;
-    }, notificationEvent('message', messageId, targetUserId, String(user._id), createdAt));
+    }, { ...notificationEvent('message', messageId, targetUserId, String(user._id), createdAt),
+        senderName: [user.firstName, user.lastName].filter(Boolean).join(' ').slice(0, 80),
+        messagePreview: text.trim().slice(0, 240) });
     return { _id: String(messageId), senderId: String(user._id), targetUserId: String(targetUserId),
         createdAt: createdAt.toISOString(), firstName: user.firstName, photoUrl: user.photoUrl || '', text };
 }

@@ -8,6 +8,8 @@ const INVALID_TOKENS = new Set(['messaging/registration-token-not-registered', '
 function pushData(event, installation) {
     return { eventId: event.eventId, type: event.type, bindingId: installation.bindingId,
         ...(event.targetUserId ? { targetUserId: String(event.targetUserId) } : {}),
+        ...(event.type === 'message' ? { senderName: String(event.senderName || '').slice(0, 80),
+            messagePreview: String(event.messagePreview || '').slice(0, 240) } : {}),
         createdAt: new Date(event.occurredAt).toISOString(), expiresAt: new Date(event.expiresAt).toISOString() };
 }
 function firebaseSender() {

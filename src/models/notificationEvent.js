@@ -4,6 +4,8 @@ const schema = new mongoose.Schema({
     recipientId: { type: mongoose.Schema.Types.ObjectId, required: true },
     type: { type: String, enum: ['message', 'connection_request'], required: true },
     targetUserId: { type: String },
+    senderName: { type: String, maxlength: 80 },
+    messagePreview: { type: String, maxlength: 240 },
     occurredAt: { type: Date, required: true },
     expiresAt: { type: Date, required: true },
     state: { type: String, enum: ['pending', 'processing', 'sent', 'failed'], default: 'pending' },
